@@ -108,12 +108,19 @@ extension BaseWireframe {
 
         assert(Thread.isMainThread)
 
+        self.present(wireframe: wireframe, animated: animated, inNavigationContainer: true, completion: completion)
+    }
+
+    public func present(wireframe: IWireframe, animated: Bool, inNavigationContainer: Bool, completion: VoidClosure?) {
+
+        assert(Thread.isMainThread)
+
         guard let wireframe = wireframe as? BaseWireframe else {
             assertionFailure("'containedWireframe' MUST be an instance of 'BaseWireframe'")
             return
         }
 
-        guard let wireframeViewInterface = wireframe.viewInterface else {
+        guard let wireframeViewController = wireframe.viewInterface?.viewController else {
             assertionFailure("'wireframe.viewInterface' is nil")
             return
         }
@@ -125,10 +132,15 @@ extension BaseWireframe {
 
         wireframe.attach(to: self, presentationType: .modal)
 
-        let navigationController = UINavigationController(rootViewController: wireframeViewInterface.viewController)
-        parentViewController.present(navigationController,
-                                     animated: animated,
-                                     completion: completion)
+        let viewControllerToPresent: UIViewController
+
+        if inNavigationContainer {
+            viewControllerToPresent = UINavigationController(rootViewController: wireframeViewController)
+        } else {
+            viewControllerToPresent = wireframeViewController
+        }
+
+        parentViewController.present(viewControllerToPresent, animated: animated, completion: completion)
     }
 
     public func presentAsRoot(animation: IWireframeRootPresentationTransitionAnimation, completion: VoidClosure?) {

@@ -36,6 +36,7 @@ public protocol IWireframe: IModuleAware, IWindowRootViewControllerUpdateUnitAwa
 
     func push(wireframe: IWireframe, animated: Bool, completion: VoidClosure?)
     func present(wireframe: IWireframe, animated: Bool, completion: VoidClosure?)
+    func present(wireframe: IWireframe, animated: Bool, inNavigationContainer: Bool, completion: VoidClosure?)
     func presentAsRoot(animation: IWireframeRootPresentationTransitionAnimation, completion: VoidClosure?)
 
     func dismiss(animated: Bool, completion: VoidClosure?)
