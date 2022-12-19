@@ -20,6 +20,7 @@ open class BaseWireframe: BaseModuleAware, IWireframe {
     public let containedWireframes: [IWireframe]
     private let containedViewInterfaces: [IViewInterface]
 
+    private weak var delegate: IWireframeHierarchyDelegate?
     private let navigationAwareUnit: INavigationAwareUnit = DefaultNavigationAwareUnit()
 
     required public init(viewInterface: IViewInterface, windowRootViewControllerUpdateUnit: IWindowRootViewControllerUpdateUnit) {
@@ -72,6 +73,11 @@ open class BaseWireframe: BaseModuleAware, IWireframe {
 // MARK: - IWireframe
 
 extension BaseWireframe {
+
+    public func setHierarchyDelegate(_ delegate: IWireframeHierarchyDelegate?) {
+
+        self.delegate = delegate
+    }
 
     public func push(wireframe: IWireframe, animated: Bool, completion: VoidClosure?) {
 
@@ -150,7 +156,7 @@ extension BaseWireframe {
             return
         }
 
-        self.deattach()
+        self.detachFromParent()
         self.presentationType = .root
 
         let navigationController = UINavigationController(rootViewController: viewInterface.viewController)
@@ -182,7 +188,7 @@ extension BaseWireframe {
             assertionFailure("can't dismiss - wireframe is contained")
             break
         case .modal:
-            self.deattach()
+            self.detachFromParent()
             viewController.dismiss(animated: animated, completion: completion)
             break
         case .navigation:
@@ -190,7 +196,7 @@ extension BaseWireframe {
                 assertionFailure("'viewController.navigationController' is nil")
                 return
             }
-            self.deattach()
+            self.detachFromParent()
             self.navigationAwareUnit.pop(viewController: viewController,
                                          from: navigationController,
                                          animated: animated,
@@ -205,7 +211,7 @@ extension BaseWireframe {
 
 private extension BaseWireframe {
 
-    private func attach(to parent: BaseWireframe, presentationType: IWireframePresentationType) {
+    private func attach(to parent: IWireframe, presentationType: IWireframePresentationType) {
 
         assert(Thread.isMainThread)
 
@@ -219,25 +225,27 @@ private extension BaseWireframe {
             return
         }
 
-        guard parent.nextWireframe == nil else {
-            assertionFailure("'parent.nextWireframe' isn't nil")
-            return
-        }
+        assert(self.presentationType == .none)
 
         guard self.parentWireframe == nil else {
             assertionFailure("'self.parentWireframe' isn't nil")
             return
         }
 
+        guard let parent = parent as? BaseWireframe else {
+            assertionFailure("'parent' MUST be an instance of 'BaseWireframe'")
+            return
+        }
+
         if presentationType != .contained {
-            parent.nextWireframe = self
+            parent.setNextWireframe(self, presentationType: presentationType)
         }
 
         self.parentWireframe = parent
         self.presentationType = presentationType
     }
 
-    private func deattach() {
+    func detachFromParent() {
 
         assert(Thread.isMainThread)
 
@@ -267,13 +275,108 @@ private extension BaseWireframe {
             return
         }
 
-        if parent.nextWireframe === self {
-            parent.nextWireframe = nil
-        } else {
-            assertionFailure("'parent.nextWireframe' MUST be equal to 'self'")
-        }
+        parent.unsetNextWireframe(self)
 
         self.parentWireframe = nil
         self.presentationType = .none
+    }
+
+    private func setNextWireframe(_ child: IWireframe, presentationType: IWireframePresentationType) {
+
+        assert(Thread.isMainThread)
+
+        guard self.nextWireframe == nil else {
+            assertionFailure("'self.nextWireframe' isn't nil")
+            return
+        }
+
+        guard child.parentWireframe == nil else {
+            assertionFailure("'child.parentWireframe' isn't nil")
+            return
+        }
+
+        self.notifyWillAttachChildWireframe(child, withPresentation: presentationType)
+
+        self.nextWireframe = child
+    }
+
+    private func unsetNextWireframe(_ child: IWireframe) {
+
+        assert(Thread.isMainThread)
+
+        guard self.nextWireframe != nil else {
+            assertionFailure("'self.nextWireframe' is nil")
+            return
+        }
+
+        guard let nextWireframe = self.nextWireframe, nextWireframe === child else {
+            assertionFailure("'nextWireframe' MUST be equal to 'child'")
+            return
+        }
+
+        guard child.parentWireframe === self else {
+            assertionFailure("'child.parentWireframe' MUST be equal to 'self'")
+            return
+        }
+
+        guard child.presentationType != .none else {
+            assertionFailure("'presentationType' is invalid: .none")
+            assert(self.parentWireframe == nil)
+            return
+        }
+
+        guard child.presentationType != .root else {
+            assertionFailure("'presentationType' is invalid: .root")
+            return
+        }
+
+        guard child.presentationType != .contained else {
+            assertionFailure("'presentationType' is invalid: .contained")
+            return
+        }
+
+        self.notifyWillDetachChildWireframe(child)
+
+        self.nextWireframe = nil
+    }
+
+    func notifyWillAttachChildWireframe(_ child: IWireframe, withPresentation type: IWireframePresentationType) {
+
+        assert(Thread.isMainThread)
+
+        if let delegate = self.delegate {
+            delegate.wireframe(self, hierarchyWillAttachChildWireframe: child, withPresentation: type)
+        }
+
+        guard let parent = self.parentWireframe else {
+            return
+        }
+
+        guard let parent = parent as? BaseWireframe else {
+            assertionFailure("'parent' MUST be an instance of 'BaseWireframe'")
+            return
+        }
+
+        parent.notifyWillAttachChildWireframe(child, withPresentation: type)
+    }
+
+    func notifyWillDetachChildWireframe(_ child: IWireframe) {
+
+        assert(Thread.isMainThread)
+        
+        if let delegate = self.delegate {
+            delegate.wireframe(self, hierarchyWillDetachChildWireframe: child)
+        }
+
+        guard let parent = self.parentWireframe else {
+            return
+        }
+
+        guard let parent = parent as? BaseWireframe else {
+            assertionFailure("'parent' MUST be an instance of 'BaseWireframe'")
+            return
+        }
+
+        parent.notifyWillDetachChildWireframe(child)
     }
 }

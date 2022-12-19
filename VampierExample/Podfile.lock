@@ -1,8 +1,8 @@
 PODS:
   - PureLayout (3.1.9)
-  - Vampier (1.0.1):
-    - Vampier/Core (= 1.0.1)
-  - Vampier/Core (1.0.1)
+  - Vampier (1.0.2):
+    - Vampier/Core (= 1.0.2)
+  - Vampier/Core (1.0.2)
 
 DEPENDENCIES:
   - PureLayout
@@ -18,7 +18,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   PureLayout: 5fb5e5429519627d60d079ccb1eaa7265ce7cf88
-  Vampier: b08411ed8a144257d7baf4a01f10edab99364eb3
+  Vampier: 9f1323557d60156faa6ca3be8e00652a698b4a89
 
 PODFILE CHECKSUM: 7bec5641ba685d5f97a9e86e58f0b058db104a3f
 

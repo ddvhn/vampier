@@ -24,6 +24,13 @@ public enum IWireframeRootPresentationTransitionAnimation {
     case transitionFlipFromRight
 }
 
+public protocol IWireframeHierarchyDelegate: AnyObject {
+
+    func wireframe(_ wireframe: IWireframe, hierarchyWillAttachChildWireframe child: IWireframe, withPresentation type: IWireframePresentationType)
+
+    func wireframe(_ wireframe: IWireframe, hierarchyWillDetachChildWireframe child: IWireframe)
+}
+
 public protocol IWireframe: IModuleAware, IWindowRootViewControllerUpdateUnitAware {
 
     var viewInterface: IViewInterface? { get }
@@ -33,6 +40,8 @@ public protocol IWireframe: IModuleAware, IWindowRootViewControllerUpdateUnitAwa
     var parentWireframe: IWireframe? { get }
 
     var containedWireframes: [IWireframe] { get }
+
+    func setHierarchyDelegate(_ delegate: IWireframeHierarchyDelegate?)
 
     func push(wireframe: IWireframe, animated: Bool, completion: VoidClosure?)
     func present(wireframe: IWireframe, animated: Bool, completion: VoidClosure?)
