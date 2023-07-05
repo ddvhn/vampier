@@ -151,6 +151,8 @@ extension BaseWireframe {
 
     public func presentAsRoot(animation: IWireframeRootPresentationTransitionAnimation, completion: VoidClosure?) {
 
+        assert(Thread.isMainThread)
+
         guard let viewInterface = self.viewInterface else {
             assertionFailure("'self.viewInterface' is nil")
             return
@@ -180,28 +182,27 @@ extension BaseWireframe {
         switch self.presentationType {
         case .none:
             assertionFailure("can't dismiss - wireframe isn't presented")
-            break
         case .root:
             assertionFailure("can't dismiss - wireframe is root")
-            break
         case .contained:
             assertionFailure("can't dismiss - wireframe is contained")
-            break
         case .modal:
             self.detachFromParent()
-            viewController.dismiss(animated: animated, completion: completion)
-            break
+            if let presentingViewController = viewController.presentingViewController {
+                presentingViewController.dismiss(animated: animated, completion: completion)
+            } else {
+                if !viewController.isBeingPresented {
+                    assertionFailure("'presentingViewController' is nil")
+                }
+                viewController.dismiss(animated: animated, completion: completion)
+            }
         case .navigation:
             guard let navigationController = viewController.navigationController else {
                 assertionFailure("'viewController.navigationController' is nil")
                 return
             }
             self.detachFromParent()
-            self.navigationAwareUnit.pop(viewController: viewController,
-                                         from: navigationController,
-                                         animated: animated,
-                                         completion: completion)
-            break
+            self.navigationAwareUnit.pop(viewController: viewController, from: navigationController, animated: animated, completion: completion)
         }
     }
 }
